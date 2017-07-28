@@ -1,10 +1,5 @@
-import edu.memphis.cs.netlab.nacapp.NACNode;
-
-import com.google.common.io.FileBackedOutputStream;
-
 import edu.memphis.cs.netlab.nacapp.Global;
 import edu.memphis.cs.netlab.nacapp.InterestHandler;
-
 import net.named_data.jndn.*;
 import net.named_data.jndn.encrypt.ProducerDb;
 import net.named_data.jndn.util.Common;
@@ -85,7 +80,7 @@ public class App {
 
 	public static void main(String[] args) {
 		Name prefix = new Name(Global.LOCAL_HOME + "/SAMPLE/location/bedroom");
-		TemperatureReader node = null;
+		TemperatureReader node;
 		try {
 			node = new TemperatureReader(
 				new Name(Global.LOCAL_HOME),

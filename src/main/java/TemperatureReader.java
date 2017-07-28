@@ -37,6 +37,10 @@ public class TemperatureReader extends NACNode implements Producer.OnEncryptedKe
 				this.cKeys = new LinkedList<>();
 			}
 			this.cKeys.add(cKey);
+			System.out.println("Added c-key: " + cKey.getName().toUri());
+		}
+		if (list.size() < 1) {
+			System.err.println("Error: EncryptedKeys list is empty");
 		}
 	}
 
@@ -46,14 +50,46 @@ public class TemperatureReader extends NACNode implements Producer.OnEncryptedKe
 	}
 
 	public Data searchLocalCKey(Name n) {
+		System.out.println(
+			String.format("Searching c-key for %s (%d keys in store)",
+				n.toUri(), null == cKeys ? 0 : cKeys.size()));
 		if (null != cKeys) {
 			for (Data d : cKeys) {
-				if (d.getName().isPrefixOf(n)) {
+				System.out.println("\t-> " + d.getName().toUri());
+				if (n.isPrefixOf(d.getName())) {
 					return d;
 				}
 			}
 		}
+		System.out.println("C-Key not found.");
 		return null;
+	}
+
+	public void queryTemperature(double timeslot, OnData handler) {
+		Data d = new Data();
+		final double temp = 75.0;
+		try {
+			Name keyName = producer.createContentKey(timeslot, new Producer.OnEncryptedKeys() {
+				@Override
+				public void onEncryptedKeys(List keys) {
+					TemperatureReader.this.onEncryptedKeys(keys);
+					try {
+						Global.LOGGER.info("    -> Producing onEncryptedKeys. ");
+						producer.produce(d, timeslot, new Blob(String.valueOf(temp)));
+						handler.onData(null, d);
+					} catch (Throwable e) {
+						throw new RuntimeException(e);
+					}
+				}
+			}, this);
+			if (null != searchLocalCKey(keyName)) {
+				Global.LOGGER.info("    -> Producing on existing local c-key. ");
+				producer.produce(d, timeslot, new Blob(String.valueOf(temp)));
+				handler.onData(null, d);
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 //	public void queryCKey(double timeslot, OnData onCKey) {
@@ -76,16 +112,4 @@ public class TemperatureReader extends NACNode implements Producer.OnEncryptedKe
 //			Global.LOGGER.warning("queryCKey() -> " + error.getMessage());
 //		}
 //	}
-
-	public void queryTemperature(double timeslot, OnData handler) {
-		Data d = new Data();
-		final double temp = 75.0;
-		try {
-			producer.createContentKey(timeslot, this, this);
-			producer.produce(d, timeslot, new Blob(String.valueOf(temp)));
-			handler.onData(null, d);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 }
